@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   MapPin,
   Phone,
-  Star,
   Heart,
   Check,
   ThumbsDown,
@@ -10,62 +9,92 @@ import {
   Filter,
   Search,
   ExternalLink,
-  Tag,
+  Trash2,
 } from 'lucide-react';
-import { restaurants, areas } from '../data/mockData';
-import { Restaurant, RestaurantStatus } from '../types';
+import { RestaurantStatus } from '../services';
+import { useAuth } from '../contexts/AuthContext';
+import { useUI } from '../contexts/UIContext';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { fetchRestaurants, deleteRestaurant, setFilters } from '../store/slices/restaurantsSlice';
+import { fetchAreas } from '../store/slices/areasSlice';
 
-interface RestaurantsProps {
-  onSelectRestaurant: (restaurant: Restaurant) => void;
-}
-
-export default function Restaurants({ onSelectRestaurant }: RestaurantsProps) {
-  const [selectedArea, setSelectedArea] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<RestaurantStatus | 'all'>('all');
+export default function Restaurants() {
+  const { coupleId } = useAuth();
+  const { showToast } = useUI();
+  const dispatch = useAppDispatch();
+  
+  const { restaurants, loading, filters } = useAppSelector((state) => state.restaurants);
+  const { areas } = useAppSelector((state) => state.areas);
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
   const statusConfig = {
-    want_to_eat: {
+    WantToEat: {
       label: 'Muốn ăn',
       icon: Heart,
       color: 'text-rose-600',
       bgColor: 'bg-rose-50',
-      borderColor: 'border-rose-200',
     },
-    eaten: {
+    Eaten: {
       label: 'Đã ăn',
       icon: Check,
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50',
-      borderColor: 'border-emerald-200',
     },
-    dislike: {
+    Dislike: {
       label: 'Không thích',
       icon: ThumbsDown,
       color: 'text-gray-600',
       bgColor: 'bg-gray-50',
-      borderColor: 'border-gray-200',
     },
-    considering: {
+    Considering: {
       label: 'Cân nhắc',
       icon: Clock,
       color: 'text-amber-600',
       bgColor: 'bg-amber-50',
-      borderColor: 'border-amber-200',
     },
   };
 
-  const filteredRestaurants = restaurants.filter((restaurant) => {
-    const matchesArea = selectedArea === 'all' || restaurant.area.id === selectedArea;
-    const matchesStatus = selectedStatus === 'all' || restaurant.status === selectedStatus;
-    const matchesSearch =
-      restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      restaurant.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      restaurant.notes?.toLowerCase().includes(searchQuery.toLowerCase());
+  useEffect(() => {
+    if (coupleId) {
+      dispatch(fetchRestaurants({ coupleId, areaId: filters.areaId, status: filters.status }));
+      dispatch(fetchAreas(coupleId));
+    }
+  }, [coupleId, filters.areaId, filters.status, dispatch]);
 
-    return matchesArea && matchesStatus && matchesSearch;
-  });
+  const handleDelete = async (id: number, name: string) => {
+    if (!confirm(`Bạn có chắc muốn xóa quán "${name}"?`)) return;
+
+    try {
+      await dispatch(deleteRestaurant(id)).unwrap();
+      showToast('success', 'Xóa quán thành công');
+    } catch (error: any) {
+      showToast('error', error.message || 'Không thể xóa quán');
+    }
+  };
+
+  const handleAreaChange = (areaId: number | undefined) => {
+    dispatch(setFilters({ areaId, status: filters.status }));
+  };
+
+  const handleStatusChange = (status: RestaurantStatus | undefined) => {
+    dispatch(setFilters({ areaId: filters.areaId, status }));
+  };
+
+  const filteredRestaurants = restaurants.filter((restaurant) =>
+    restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    restaurant.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    restaurant.notes?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-xl text-gray-600">Đang tải...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -104,11 +133,11 @@ export default function Restaurants({ onSelectRestaurant }: RestaurantsProps) {
                 Khu vực
               </label>
               <select
-                value={selectedArea}
-                onChange={(e) => setSelectedArea(e.target.value)}
+                value={filters.areaId || ''}
+                onChange={(e) => handleAreaChange(e.target.value ? parseInt(e.target.value) : undefined)}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-rose-500"
               >
-                <option value="all">Tất cả khu vực</option>
+                <option value="">Tất cả khu vực</option>
                 {areas.map((area) => (
                   <option key={area.id} value={area.id}>
                     {area.name}
@@ -122,11 +151,11 @@ export default function Restaurants({ onSelectRestaurant }: RestaurantsProps) {
                 Trạng thái
               </label>
               <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value as RestaurantStatus | 'all')}
+                value={filters.status || ''}
+                onChange={(e) => handleStatusChange(e.target.value as RestaurantStatus || undefined)}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-rose-500"
               >
-                <option value="all">Tất cả trạng thái</option>
+                <option value="">Tất cả trạng thái</option>
                 {Object.entries(statusConfig).map(([key, config]) => (
                   <option key={key} value={key}>
                     {config.label}
@@ -142,10 +171,10 @@ export default function Restaurants({ onSelectRestaurant }: RestaurantsProps) {
         <div className="bg-white rounded-2xl p-12 text-center shadow-lg">
           <MapPin className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-xl font-bold text-gray-900 mb-2">
-            Không tìm thấy quán nào
+            Chưa có quán nào
           </h3>
           <p className="text-gray-600">
-            Thử thay đổi bộ lọc hoặc tìm kiếm từ khóa khác
+            Thêm quán ăn đầu tiên của bạn
           </p>
         </div>
       ) : (
@@ -157,44 +186,25 @@ export default function Restaurants({ onSelectRestaurant }: RestaurantsProps) {
             return (
               <div
                 key={restaurant.id}
-                onClick={() => onSelectRestaurant(restaurant)}
-                className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all cursor-pointer group border border-gray-100 overflow-hidden"
+                className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all border border-gray-100 overflow-hidden"
               >
-                <div className="relative">
-                  <img
-                    src={restaurant.images[0]}
-                    alt={restaurant.name}
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute top-3 right-3 flex space-x-2">
-                    <div className={`${config.bgColor} px-3 py-1 rounded-full flex items-center space-x-1 shadow-lg`}>
+                <div className="p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="font-bold text-gray-900 text-lg flex-1">
+                      {restaurant.name}
+                    </h3>
+                    <div className={`${config.bgColor} px-2 py-1 rounded-full flex items-center space-x-1`}>
                       <StatusIcon className={`w-4 h-4 ${config.color}`} />
-                      <span className={`text-sm font-semibold ${config.color}`}>
+                      <span className={`text-xs font-semibold ${config.color}`}>
                         {config.label}
                       </span>
                     </div>
-                  </div>
-                  {restaurant.rating && (
-                    <div className="absolute bottom-3 left-3 bg-white px-3 py-1 rounded-full flex items-center space-x-1 shadow-lg">
-                      <Star className="w-4 h-4 text-amber-400 fill-current" />
-                      <span className="text-sm font-bold text-gray-900">
-                        {restaurant.rating}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-5">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-bold text-gray-900 text-lg group-hover:text-rose-600 transition-colors">
-                      {restaurant.name}
-                    </h3>
                   </div>
 
                   <div className="space-y-2 mb-4">
                     <div className="flex items-start space-x-2 text-gray-600 text-sm">
                       <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                      <span className="line-clamp-1">{restaurant.address}</span>
+                      <span className="line-clamp-2">{restaurant.address || 'Chưa có địa chỉ'}</span>
                     </div>
 
                     {restaurant.phone && (
@@ -204,14 +214,9 @@ export default function Restaurants({ onSelectRestaurant }: RestaurantsProps) {
                       </div>
                     )}
 
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium text-rose-600">
-                        {restaurant.priceRange || 'Chưa rõ'}
-                      </span>
-                      <span className="text-gray-300">•</span>
-                      <span className="text-sm text-gray-600">
-                        {restaurant.area.name}
-                      </span>
+                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <MapPin className="w-4 h-4" />
+                      <span>{restaurant.areaName}</span>
                     </div>
                   </div>
 
@@ -221,29 +226,24 @@ export default function Restaurants({ onSelectRestaurant }: RestaurantsProps) {
                     </p>
                   )}
 
-                  {restaurant.tags && restaurant.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {restaurant.tags.slice(0, 3).map((tag) => (
-                        <span
-                          key={tag}
-                          className="bg-gray-100 text-gray-700 px-2 py-1 rounded-lg text-xs font-medium"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
                   {restaurant.source && (
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                      <span className="text-xs text-gray-500">
-                        Từ {restaurant.source}
-                      </span>
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-100 text-xs text-gray-500">
+                      <span>Từ {restaurant.source}</span>
                       {restaurant.sourceUrl && (
                         <ExternalLink className="w-4 h-4 text-gray-400" />
                       )}
                     </div>
                   )}
+
+                  <div className="flex gap-2 mt-4">
+                    <button
+                      onClick={() => handleDelete(restaurant.id, restaurant.name)}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                    >
+                      <Trash2 size={16} />
+                      <span className="text-sm">Xóa</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             );

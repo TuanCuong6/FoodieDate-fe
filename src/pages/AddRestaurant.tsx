@@ -1,60 +1,94 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   MapPin,
   Phone,
-  Link as LinkIcon,
-  Image,
-  Tag,
   FileText,
-  DollarSign,
   Check,
   Sparkles,
 } from 'lucide-react';
-import { areas } from '../data/mockData';
+import { CreateRestaurantDto, RestaurantStatus } from '../services';
+import { useAuth } from '../contexts/AuthContext';
+import { useUI } from '../contexts/UIContext';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { createRestaurant } from '../store/slices/restaurantsSlice';
+import { fetchAreas } from '../store/slices/areasSlice';
 
-interface AddRestaurantProps {
-  onNavigate: (page: string) => void;
-}
-
-export default function AddRestaurant({ onNavigate }: AddRestaurantProps) {
+export default function AddRestaurant() {
+  const navigate = useNavigate();
+  const { coupleId, userId } = useAuth();
+  const { showToast, setGlobalLoading } = useUI();
+  const dispatch = useAppDispatch();
+  
+  const { areas } = useAppSelector((state) => state.areas);
   const [formData, setFormData] = useState({
     name: '',
     address: '',
     phone: '',
-    area: '',
+    areaId: 0,
     notes: '',
     source: '',
     sourceUrl: '',
-    priceRange: '',
-    tags: '',
+    status: 'WantToEat' as RestaurantStatus,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (coupleId) {
+      dispatch(fetchAreas(coupleId));
+    }
+  }, [coupleId, dispatch]);
+
+  useEffect(() => {
+    if (areas.length > 0 && formData.areaId === 0) {
+      setFormData(prev => ({ ...prev, areaId: areas[0].id }));
+    }
+  }, [areas]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!coupleId) return;
+    
     setIsSubmitting(true);
+    setGlobalLoading(true);
 
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const dto: CreateRestaurantDto = {
+        coupleId,
+        areaId: formData.areaId,
+        name: formData.name,
+        address: formData.address || undefined,
+        phone: formData.phone || undefined,
+        source: formData.source || undefined,
+        sourceUrl: formData.sourceUrl || undefined,
+        notes: formData.notes || undefined,
+        status: formData.status,
+      };
+
+      await dispatch(createRestaurant(dto)).unwrap();
       setShowSuccess(true);
-
+      showToast('success', 'Thêm quán thành công');
       setTimeout(() => {
         setShowSuccess(false);
-        onNavigate('restaurants');
+        navigate('/restaurants');
       }, 1500);
-    }, 1000);
+    } catch (error: any) {
+      showToast('error', error.message || 'Không thể thêm quán');
+    } finally {
+      setIsSubmitting(false);
+      setGlobalLoading(false);
+    }
   };
 
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: name === 'areaId' ? parseInt(value) : value,
     });
   };
 
@@ -65,12 +99,31 @@ export default function AddRestaurant({ onNavigate }: AddRestaurantProps) {
       phone: '0243 926 8989',
       notes: 'Phở bò truyền thống ngon, nước dùng đậm đà, thịt mềm',
       source: 'TikTok',
-      priceRange: '60k - 90k',
-      tags: 'Phở, Truyền thống, Nổi tiếng',
     };
 
     setFormData({ ...formData, ...sampleData });
   };
+
+  if (areas.length === 0) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-8 text-center">
+          <h3 className="text-xl font-bold text-yellow-900 mb-2">
+            Chưa có khu vực nào
+          </h3>
+          <p className="text-yellow-800 mb-4">
+            Bạn cần tạo ít nhất một khu vực trước khi thêm quán ăn
+          </p>
+          <button
+            onClick={() => navigate('/areas')}
+            className="px-6 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition"
+          >
+            Đi tới Quản lý khu vực
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -135,13 +188,12 @@ export default function AddRestaurant({ onNavigate }: AddRestaurantProps) {
                 Khu vực *
               </label>
               <select
-                name="area"
-                value={formData.area}
+                name="areaId"
+                value={formData.areaId}
                 onChange={handleChange}
                 required
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-rose-500"
               >
-                <option value="">Chọn khu vực</option>
                 {areas.map((area) => (
                   <option key={area.id} value={area.id}>
                     {area.name}
@@ -153,7 +205,7 @@ export default function AddRestaurant({ onNavigate }: AddRestaurantProps) {
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Địa chỉ *
+              Địa chỉ
             </label>
             <div className="relative">
               <MapPin className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
@@ -162,7 +214,6 @@ export default function AddRestaurant({ onNavigate }: AddRestaurantProps) {
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
-                required
                 placeholder="VD: 13 Lò Đúc, Hai Bà Trưng, Hà Nội"
                 className="w-full border border-gray-300 rounded-lg pl-12 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-rose-500"
               />
@@ -189,19 +240,19 @@ export default function AddRestaurant({ onNavigate }: AddRestaurantProps) {
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Khoảng giá
+                Trạng thái
               </label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  name="priceRange"
-                  value={formData.priceRange}
-                  onChange={handleChange}
-                  placeholder="VD: 50k - 80k"
-                  className="w-full border border-gray-300 rounded-lg pl-12 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-rose-500"
-                />
-              </div>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-rose-500"
+              >
+                <option value="WantToEat">Muốn ăn</option>
+                <option value="Eaten">Đã ăn</option>
+                <option value="Considering">Cân nhắc</option>
+                <option value="Dislike">Không thích</option>
+              </select>
             </div>
           </div>
 
@@ -222,42 +273,23 @@ export default function AddRestaurant({ onNavigate }: AddRestaurantProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Nguồn
-              </label>
-              <select
-                name="source"
-                value={formData.source}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-rose-500"
-              >
-                <option value="">Chọn nguồn</option>
-                <option value="TikTok">TikTok</option>
-                <option value="Facebook">Facebook</option>
-                <option value="Instagram">Instagram</option>
-                <option value="YouTube">YouTube</option>
-                <option value="Khác">Khác</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Tags
-              </label>
-              <div className="relative">
-                <Tag className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  name="tags"
-                  value={formData.tags}
-                  onChange={handleChange}
-                  placeholder="VD: Phở, Truyền thống, Lãng mạn"
-                  className="w-full border border-gray-300 rounded-lg pl-12 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-rose-500"
-                />
-              </div>
-            </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Nguồn
+            </label>
+            <select
+              name="source"
+              value={formData.source}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-rose-500"
+            >
+              <option value="">Chọn nguồn</option>
+              <option value="TikTok">TikTok</option>
+              <option value="Facebook">Facebook</option>
+              <option value="Instagram">Instagram</option>
+              <option value="YouTube">YouTube</option>
+              <option value="Khác">Khác</option>
+            </select>
           </div>
 
           <div className="flex items-center space-x-4 pt-6 border-t border-gray-200">
@@ -283,7 +315,7 @@ export default function AddRestaurant({ onNavigate }: AddRestaurantProps) {
 
             <button
               type="button"
-              onClick={() => onNavigate('restaurants')}
+              onClick={() => navigate('/restaurants')}
               className="px-8 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-all"
             >
               Hủy

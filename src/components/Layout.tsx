@@ -24,6 +24,7 @@ export default function Layout({ children, currentPage, onPageChange, userName }
 
   const navigation = [
     { name: 'Dashboard', icon: Home, id: 'dashboard' },
+    { name: 'Khu vực', icon: MapPin, id: 'areas' },
     { name: 'Quán ăn', icon: MapPin, id: 'restaurants' },
     { name: 'Lịch hẹn', icon: Calendar, id: 'calendar' },
     { name: 'Thống kê', icon: BarChart3, id: 'statistics' },

@@ -1,12 +1,13 @@
 import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { authService, LoginDto } from '../services';
+import { useAuth, useUI } from '../contexts';
 
-interface LoginProps {
-  onLoginSuccess: (userId: number, name: string) => void;
-  onSwitchToRegister: () => void;
-}
-
-export default function Login({ onLoginSuccess, onSwitchToRegister }: LoginProps) {
+export default function Login() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const { showToast } = useUI();
+  
   const [formData, setFormData] = useState<LoginDto>({
     email: '',
     password: '',
@@ -22,7 +23,15 @@ export default function Login({ onLoginSuccess, onSwitchToRegister }: LoginProps
     try {
       const response = await authService.login(formData);
       if (response.success && response.data) {
-        onLoginSuccess(response.data.userId, response.data.name);
+        login(
+          response.data.userId,
+          response.data.name,
+          response.data.email,
+          response.data.token,
+          response.data.couple?.id
+        );
+        showToast('success', 'Đăng nhập thành công!');
+        navigate('/dashboard');
       } else {
         setError(response.message || 'Đăng nhập thất bại');
       }
@@ -34,8 +43,7 @@ export default function Login({ onLoginSuccess, onSwitchToRegister }: LoginProps
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 to-orange-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+    <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <h1 className="text-3xl font-bold text-center mb-2 text-gray-800">
           🍜 Foodie Date Planner
         </h1>
@@ -88,15 +96,14 @@ export default function Login({ onLoginSuccess, onSwitchToRegister }: LoginProps
         <div className="mt-6 text-center">
           <p className="text-gray-600">
             Chưa có tài khoản?{' '}
-            <button
-              onClick={onSwitchToRegister}
+            <Link
+              to="/auth/register"
               className="text-orange-500 font-semibold hover:text-orange-600"
             >
               Đăng ký ngay
-            </button>
+            </Link>
           </p>
         </div>
-      </div>
     </div>
   );
 }

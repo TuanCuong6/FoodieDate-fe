@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { User, Heart, Mail, Calendar, LogOut, UserPlus } from 'lucide-react';
-import { userService, coupleService, authService, UserProfile, CoupleDetail, InvitationDto } from '../services';
+import { userService, coupleService, UserProfile, CoupleDetail, InvitationDto } from '../services';
+import { useAuth } from '../contexts/AuthContext';
+import { useUI } from '../contexts/UIContext';
 
-interface ProfileProps {
-  userId: number;
-  onLogout: () => void;
-}
-
-export default function Profile({ userId, onLogout }: ProfileProps) {
+export default function Profile() {
+  const { userId, updateCoupleId, logout } = useAuth();
+  const { showToast } = useUI();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [couple, setCouple] = useState<CoupleDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -17,19 +16,24 @@ export default function Profile({ userId, onLogout }: ProfileProps) {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    loadProfile();
+    if (userId) {
+      loadProfile();
+    }
   }, [userId]);
 
   const loadProfile = async () => {
+    if (!userId) return;
+    
     try {
       const profileRes = await userService.getProfile(userId);
       if (profileRes.success && profileRes.data) {
         setProfile(profileRes.data);
 
-        if (profileRes.data.hasCouple) {
+        if (profileRes.data.hasCouple && userId) {
           const coupleRes = await coupleService.getCoupleByUserId(userId);
           if (coupleRes.success && coupleRes.data) {
             setCouple(coupleRes.data);
+            updateCoupleId(coupleRes.data.id);
           }
         }
       }
@@ -41,7 +45,7 @@ export default function Profile({ userId, onLogout }: ProfileProps) {
   };
 
   const handleSendInvitation = async () => {
-    if (!inviteEmail) return;
+    if (!inviteEmail || !userId) return;
 
     try {
       const dto: InvitationDto = {
@@ -54,17 +58,19 @@ export default function Profile({ userId, onLogout }: ProfileProps) {
         setMessage(response.data.message);
         if (response.data.success) {
           setShowInviteModal(false);
+          showToast('success', 'Tạo cặp đôi thành công!');
           loadProfile(); // Reload to get couple info
         }
       }
     } catch (error: any) {
       setMessage(error.message || 'Đã có lỗi xảy ra');
+      showToast('error', error.message || 'Đã có lỗi xảy ra');
     }
   };
 
   const handleLogout = () => {
-    authService.logout();
-    onLogout();
+    logout();
+    showToast('info', 'Đã đăng xuất');
   };
 
   if (loading) {
