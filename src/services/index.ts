@@ -5,3 +5,4 @@ export * from './userService';
 export * from './coupleService';
 export * from './areaService';
 export * from './restaurantService';
+export * from './planService';

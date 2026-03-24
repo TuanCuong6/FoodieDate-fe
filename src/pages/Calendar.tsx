@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -8,13 +8,40 @@ import {
   ChevronRight,
   Check,
   X,
+  Trash2,
 } from 'lucide-react';
-import { plans } from '../data/mockData';
-import { Plan } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import { useUI } from '../contexts/UIContext';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { 
+  fetchPlansByDateRange, 
+  markPlanAsCompleted, 
+  markPlanAsCancelled, 
+  deletePlan 
+} from '../store/slices/plansSlice';
+import { PlanDto } from '../services';
 
 export default function Calendar() {
+  const { coupleId } = useAuth();
+  const { showToast } = useUI();
+  const dispatch = useAppDispatch();
+  
+  const { plans, loading } = useAppSelector((state) => state.plans);
+  
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<PlanDto | null>(null);
+
+  useEffect(() => {
+    if (coupleId) {
+      // Load plans for current month
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const startDate = new Date(year, month, 1).toISOString();
+      const endDate = new Date(year, month + 1, 0).toISOString();
+      
+      dispatch(fetchPlansByDateRange({ coupleId, startDate, endDate }));
+    }
+  }, [coupleId, currentDate, dispatch]);
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -45,22 +72,54 @@ export default function Calendar() {
     const dateStr = `${currentDate.getFullYear()}-${String(
       currentDate.getMonth() + 1
     ).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return plans.filter((plan) => plan.date === dateStr);
+    
+    return plans.filter((plan) => {
+      const planDate = new Date(plan.planDate).toISOString().split('T')[0];
+      return planDate === dateStr;
+    });
+  };
+
+  const handleMarkCompleted = async () => {
+    if (!selectedPlan) return;
+    
+    try {
+      await dispatch(markPlanAsCompleted(selectedPlan.id)).unwrap();
+      showToast('success', 'Đã đánh dấu hoàn thành');
+      setSelectedPlan(null);
+    } catch (error: any) {
+      showToast('error', error.message || 'Không thể cập nhật');
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!selectedPlan) return;
+    
+    try {
+      await dispatch(markPlanAsCancelled(selectedPlan.id)).unwrap();
+      showToast('success', 'Đã hủy lịch hẹn');
+      setSelectedPlan(null);
+    } catch (error: any) {
+      showToast('error', error.message || 'Không thể hủy');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedPlan) return;
+    
+    if (!confirm('Bạn có chắc muốn xóa lịch hẹn này?')) return;
+    
+    try {
+      await dispatch(deletePlan(selectedPlan.id)).unwrap();
+      showToast('success', 'Đã xóa lịch hẹn');
+      setSelectedPlan(null);
+    } catch (error: any) {
+      showToast('error', error.message || 'Không thể xóa');
+    }
   };
 
   const monthNames = [
-    'Tháng 1',
-    'Tháng 2',
-    'Tháng 3',
-    'Tháng 4',
-    'Tháng 5',
-    'Tháng 6',
-    'Tháng 7',
-    'Tháng 8',
-    'Tháng 9',
-    'Tháng 10',
-    'Tháng 11',
-    'Tháng 12',
+    'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+    'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12',
   ];
 
   const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
@@ -74,8 +133,16 @@ export default function Calendar() {
     );
   };
 
-  const upcomingPlans = plans.filter((p) => p.status === 'upcoming');
-  const completedPlans = plans.filter((p) => p.status === 'completed');
+  const upcomingPlans = plans.filter((p) => p.status === 'Upcoming');
+  const completedPlans = plans.filter((p) => p.status === 'Completed');
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-xl text-gray-600">Đang tải...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -164,7 +231,7 @@ export default function Calendar() {
                             key={plan.id}
                             className="text-xs bg-gradient-to-r from-rose-500 to-orange-500 text-white px-1 py-0.5 rounded truncate mb-1"
                           >
-                            {plan.time}
+                            {plan.planTime || 'Chưa rõ giờ'}
                           </div>
                         ))}
                       </div>
@@ -197,16 +264,18 @@ export default function Calendar() {
                     <div className="flex items-center space-x-2 text-sm text-rose-600 font-medium mb-1">
                       <CalendarIcon className="w-4 h-4" />
                       <span>
-                        {new Date(plan.date).toLocaleDateString('vi-VN')}
+                        {new Date(plan.planDate).toLocaleDateString('vi-VN')}
                       </span>
                     </div>
                     <p className="font-semibold text-gray-900 text-sm">
-                      {plan.restaurant.name}
+                      {plan.restaurantName}
                     </p>
-                    <p className="text-xs text-gray-600 mt-1 flex items-center space-x-1">
-                      <Clock className="w-3 h-3" />
-                      <span>{plan.time}</span>
-                    </p>
+                    {plan.planTime && (
+                      <p className="text-xs text-gray-600 mt-1 flex items-center space-x-1">
+                        <Clock className="w-3 h-3" />
+                        <span>{plan.planTime}</span>
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -224,7 +293,7 @@ export default function Calendar() {
               </p>
             ) : (
               <div className="space-y-3">
-                {completedPlans.map((plan) => (
+                {completedPlans.slice(0, 5).map((plan) => (
                   <div
                     key={plan.id}
                     className="p-3 rounded-lg border border-gray-200"
@@ -232,11 +301,11 @@ export default function Calendar() {
                     <div className="flex items-center space-x-2 text-sm text-emerald-600 font-medium mb-1">
                       <Check className="w-4 h-4" />
                       <span>
-                        {new Date(plan.date).toLocaleDateString('vi-VN')}
+                        {new Date(plan.planDate).toLocaleDateString('vi-VN')}
                       </span>
                     </div>
                     <p className="font-semibold text-gray-900 text-sm">
-                      {plan.restaurant.name}
+                      {plan.restaurantName}
                     </p>
                   </div>
                 ))}
@@ -268,35 +337,33 @@ export default function Calendar() {
             </div>
 
             <div className="space-y-4">
-              <img
-                src={selectedPlan.restaurant.images[0]}
-                alt={selectedPlan.restaurant.name}
-                className="w-full h-64 object-cover rounded-xl"
-              />
-
               <div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  {selectedPlan.restaurant.name}
+                  {selectedPlan.restaurantName}
                 </h3>
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2 text-gray-600">
                     <CalendarIcon className="w-5 h-5" />
                     <span>
-                      {new Date(selectedPlan.date).toLocaleDateString('vi-VN')}
+                      {new Date(selectedPlan.planDate).toLocaleDateString('vi-VN')}
                     </span>
                   </div>
-                  <div className="flex items-center space-x-2 text-gray-600">
-                    <Clock className="w-5 h-5" />
-                    <span>{selectedPlan.time}</span>
-                  </div>
-                  <div className="flex items-start space-x-2 text-gray-600">
-                    <MapPin className="w-5 h-5 mt-0.5" />
-                    <span>{selectedPlan.restaurant.address}</span>
-                  </div>
-                  {selectedPlan.restaurant.phone && (
+                  {selectedPlan.planTime && (
+                    <div className="flex items-center space-x-2 text-gray-600">
+                      <Clock className="w-5 h-5" />
+                      <span>{selectedPlan.planTime}</span>
+                    </div>
+                  )}
+                  {selectedPlan.restaurantAddress && (
+                    <div className="flex items-start space-x-2 text-gray-600">
+                      <MapPin className="w-5 h-5 mt-0.5" />
+                      <span>{selectedPlan.restaurantAddress}</span>
+                    </div>
+                  )}
+                  {selectedPlan.restaurantPhone && (
                     <div className="flex items-center space-x-2 text-gray-600">
                       <Phone className="w-5 h-5" />
-                      <span>{selectedPlan.restaurant.phone}</span>
+                      <span>{selectedPlan.restaurantPhone}</span>
                     </div>
                   )}
                 </div>
@@ -312,11 +379,28 @@ export default function Calendar() {
               )}
 
               <div className="flex items-center space-x-3 pt-4 border-t">
-                <button className="flex-1 bg-gradient-to-r from-rose-500 to-orange-500 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all">
-                  Xác nhận
-                </button>
-                <button className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-all">
-                  Hủy lịch
+                {selectedPlan.status === 'Upcoming' && (
+                  <>
+                    <button 
+                      onClick={handleMarkCompleted}
+                      className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
+                    >
+                      Đã hoàn thành
+                    </button>
+                    <button 
+                      onClick={handleCancel}
+                      className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-all"
+                    >
+                      Hủy lịch
+                    </button>
+                  </>
+                )}
+                <button 
+                  onClick={handleDelete}
+                  className="p-3 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all"
+                  title="Xóa lịch hẹn"
+                >
+                  <Trash2 className="w-5 h-5" />
                 </button>
               </div>
             </div>

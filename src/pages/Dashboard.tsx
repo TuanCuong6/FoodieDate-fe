@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import {
   Heart,
   Calendar,
@@ -10,11 +11,8 @@ import {
 } from 'lucide-react';
 import { statistics, plans, restaurants, reviews } from '../data/mockData';
 
-interface DashboardProps {
-  onNavigate: (page: string) => void;
-}
-
-export default function Dashboard({ onNavigate }: DashboardProps) {
+export default function Dashboard() {
+  const navigate = useNavigate();
   const upcomingPlans = plans.filter((p) => p.status === 'upcoming');
   const recentRestaurants = restaurants.slice(0, 4);
   const recentReviews = reviews.slice(0, 3);
@@ -104,7 +102,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               <span>Lịch hẹn sắp tới</span>
             </h2>
             <button
-              onClick={() => onNavigate('calendar')}
+              onClick={() => navigate('/calendar')}
               className="text-rose-600 hover:text-rose-700 font-medium text-sm flex items-center space-x-1"
             >
               <span>Xem tất cả</span>
@@ -117,7 +115,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               <Calendar className="w-16 h-16 mx-auto mb-4 opacity-50" />
               <p>Chưa có lịch hẹn nào</p>
               <button
-                onClick={() => onNavigate('restaurants')}
+                onClick={() => navigate('/restaurants')}
                 className="mt-4 text-rose-600 hover:text-rose-700 font-medium"
               >
                 Thêm lịch hẹn ngay
@@ -244,7 +242,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <span>Muốn thử</span>
           </h2>
           <button
-            onClick={() => onNavigate('restaurants')}
+            onClick={() => navigate('/restaurants')}
             className="text-rose-600 hover:text-rose-700 font-medium text-sm flex items-center space-x-1"
           >
             <span>Xem tất cả</span>
@@ -257,7 +255,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <div
               key={restaurant.id}
               className="group cursor-pointer"
-              onClick={() => onNavigate('restaurants')}
+              onClick={() => navigate('/restaurants')}
             >
               <div className="relative overflow-hidden rounded-xl mb-3">
                 <img
