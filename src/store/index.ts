@@ -4,6 +4,7 @@ import authReducer from './slices/authSlice';
 import areasReducer from './slices/areasSlice';
 import restaurantsReducer from './slices/restaurantsSlice';
 import plansReducer from './slices/plansSlice';
+import visitHistoriesReducer from './slices/visitHistoriesSlice';
 
 export const store = configureStore({
   reducer: {
@@ -11,6 +12,7 @@ export const store = configureStore({
     areas: areasReducer,
     restaurants: restaurantsReducer,
     plans: plansReducer,
+    visitHistories: visitHistoriesReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
