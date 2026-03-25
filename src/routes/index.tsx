@@ -6,14 +6,16 @@ import { AuthLayout } from '../components/layout/AuthLayout';
 // Pages
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
-import DashboardPage from '../pages/dashboard/DashboardPage';
+import DashboardPage from '../pages/Dashboard';
 import ProfilePage from '../pages/profile/ProfilePage';
 import AreasPage from '../pages/areas/AreasPage';
 import RestaurantsPage from '../pages/restaurants/RestaurantsPage';
 import AddRestaurantPage from '../pages/restaurants/AddRestaurantPage';
 import CalendarPage from '../pages/calendar/CalendarPage';
 import AddPlanPage from '../pages/AddPlan';
-import StatisticsPage from '../pages/statistics/StatisticsPage';
+import HistoryPage from '../pages/History';
+import AddHistoryPage from '../pages/AddHistory';
+import StatisticsPage from '../pages/Statistics';
 
 export const AppRoutes = () => {
   return (
@@ -41,6 +43,8 @@ export const AppRoutes = () => {
         <Route path="restaurants/add" element={<AddRestaurantPage />} />
         <Route path="calendar" element={<CalendarPage />} />
         <Route path="plans/add" element={<AddPlanPage />} />
+        <Route path="history" element={<HistoryPage />} />
+        <Route path="history/add" element={<AddHistoryPage />} />
         <Route path="statistics" element={<StatisticsPage />} />
       </Route>
 

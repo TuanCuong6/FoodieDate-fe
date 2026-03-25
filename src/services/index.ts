@@ -6,3 +6,5 @@ export * from './coupleService';
 export * from './areaService';
 export * from './restaurantService';
 export * from './planService';
+export * from './visitHistoryService';
+export * from './statisticsService';

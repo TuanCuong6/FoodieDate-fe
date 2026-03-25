@@ -1,321 +1,356 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Heart,
-  Calendar,
   MapPin,
-  TrendingUp,
-  Clock,
+  Calendar,
+  History,
   Star,
-  ChevronRight,
+  TrendingUp,
+  Heart,
+  CheckCircle,
+  Clock,
 } from 'lucide-react';
-import { statistics, restaurants, reviews } from '../data/mockData';
+import { useAuth } from '../contexts/AuthContext';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { fetchRecentVisits } from '../store/slices/visitHistoriesSlice';
 import { fetchUpcomingPlans } from '../store/slices/plansSlice';
-import { useAuth } from '../contexts';
-import { PlanDto } from '../services';
+import statisticsService, { DashboardStatsDto, RestaurantStatsDto } from '../services/statisticsService';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { coupleId, userName } = useAuth();
   const dispatch = useAppDispatch();
-  const { coupleId } = useAuth();
-  
-  const { plans, loading: plansLoading } = useAppSelector((state) => state.plans);
-  const upcomingPlans = plans.filter((p) => p.status === 'Upcoming');
-  const recentRestaurants = restaurants.slice(0, 4);
-  const recentReviews = reviews.slice(0, 3);
+
+  const { visitHistories } = useAppSelector((state) => state.visitHistories || { visitHistories: [] });
+  const { plans } = useAppSelector((state) => state.plans);
+
+  const [stats, setStats] = useState<DashboardStatsDto | null>(null);
+  const [topRestaurants, setTopRestaurants] = useState<RestaurantStatsDto[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (coupleId) {
-      dispatch(fetchUpcomingPlans(coupleId));
+      loadDashboardData();
     }
-  }, [dispatch, coupleId]);
+  }, [coupleId]);
 
-  const stats = [
-    {
-      label: 'Tổng quán',
-      value: statistics.totalRestaurants,
-      icon: MapPin,
-      color: 'from-blue-500 to-cyan-500',
-      bgColor: 'bg-blue-50',
-      textColor: 'text-blue-600',
-    },
-    {
-      label: 'Muốn thử',
-      value: statistics.wantToEat,
-      icon: Heart,
-      color: 'from-rose-500 to-pink-500',
-      bgColor: 'bg-rose-50',
-      textColor: 'text-rose-600',
-    },
-    {
-      label: 'Đã ăn',
-      value: statistics.eaten,
-      icon: Star,
-      color: 'from-amber-500 to-orange-500',
-      bgColor: 'bg-amber-50',
-      textColor: 'text-amber-600',
-    },
-    {
-      label: 'Lịch hẹn',
-      value: upcomingPlans.length,
-      icon: Calendar,
-      color: 'from-emerald-500 to-teal-500',
-      bgColor: 'bg-emerald-50',
-      textColor: 'text-emerald-600',
-    },
-  ];
+  const loadDashboardData = async () => {
+    if (!coupleId) return;
+
+    try {
+      setLoading(true);
+      
+      // Load stats
+      const statsData = await statisticsService.getDashboardStats(coupleId);
+      setStats(statsData);
+
+      // Load top restaurants
+      const topRestaurantsData = await statisticsService.getTopRestaurants(coupleId, 5);
+      setTopRestaurants(topRestaurantsData);
+
+      // Load recent visits
+      dispatch(fetchRecentVisits({ coupleId, count: 5 }));
+
+      // Load upcoming plans
+      dispatch(fetchUpcomingPlans(coupleId));
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+      // Don't block rendering on error, just log it
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderStars = (rating?: number) => {
+    if (!rating) return null;
+    return (
+      <div className="flex items-center space-x-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`w-3 h-3 ${
+              star <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
+            }`}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-xl text-gray-600">Đang tải...</div>
+      </div>
+    );
+  }
+
+  // Safe access to plans and visitHistories
+  const allPlans = plans || [];
+  const allVisits = visitHistories || [];
+  const upcomingPlans = allPlans.filter((p) => p.status === 'Upcoming').slice(0, 5);
+  const recentVisits = allVisits.slice(0, 5);
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Xin chào! 👋
-          </h1>
-          <p className="text-gray-600 mt-1">
-            Hôm nay đi ăn gì nhé? ❤️
-          </p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">
+          Xin chào, {userName}! 👋
+        </h1>
+        <p className="text-gray-600 mt-1">Chào mừng trở lại với Foodie Date</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <div
-              key={stat.label}
-              className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all border border-gray-100"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm font-medium">
-                    {stat.label}
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">
-                    {stat.value}
-                  </p>
-                </div>
-                <div className={`${stat.bgColor} p-3 rounded-xl`}>
-                  <Icon className={`w-6 h-6 ${stat.textColor}`} />
-                </div>
-              </div>
-              <div
-                className={`h-2 bg-gradient-to-r ${stat.color} rounded-full mt-4`}
-              />
+      {/* Stats Cards */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-gradient-to-br from-rose-500 to-orange-500 rounded-2xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between mb-2">
+              <MapPin className="w-8 h-8 opacity-80" />
+              <TrendingUp className="w-5 h-5 opacity-60" />
             </div>
-          );
-        })}
-      </div>
+            <h3 className="text-3xl font-bold mb-1">{stats.totalRestaurants}</h3>
+            <p className="text-sm opacity-90">Quán ăn</p>
+          </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-          <div className="flex items-center justify-between mb-6">
+          <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between mb-2">
+              <Calendar className="w-8 h-8 opacity-80" />
+              <Clock className="w-5 h-5 opacity-60" />
+            </div>
+            <h3 className="text-3xl font-bold mb-1">{stats.upcomingPlans}</h3>
+            <p className="text-sm opacity-90">Lịch hẹn sắp tới</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between mb-2">
+              <History className="w-8 h-8 opacity-80" />
+              <CheckCircle className="w-5 h-5 opacity-60" />
+            </div>
+            <h3 className="text-3xl font-bold mb-1">{stats.totalVisits}</h3>
+            <p className="text-sm opacity-90">Lần đã ăn</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-amber-500 to-yellow-500 rounded-2xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between mb-2">
+              <Star className="w-8 h-8 opacity-80" />
+              <TrendingUp className="w-5 h-5 opacity-60" />
+            </div>
+            <h3 className="text-3xl font-bold mb-1">
+              {stats.averageRating ? stats.averageRating.toFixed(1) : 'N/A'}
+            </h3>
+            <p className="text-sm opacity-90">Đánh giá TB</p>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Upcoming Plans */}
+        <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
-              <Calendar className="w-6 h-6 text-rose-500" />
+              <Calendar className="w-6 h-6 text-purple-500" />
               <span>Lịch hẹn sắp tới</span>
             </h2>
             <button
               onClick={() => navigate('/calendar')}
-              className="text-rose-600 hover:text-rose-700 font-medium text-sm flex items-center space-x-1"
+              className="text-sm text-purple-600 hover:text-purple-700 font-medium"
             >
-              <span>Xem tất cả</span>
-              <ChevronRight className="w-4 h-4" />
+              Xem tất cả →
             </button>
           </div>
 
-          {plansLoading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-500 mx-auto"></div>
-              <p className="text-gray-500 mt-4">Đang tải...</p>
-            </div>
-          ) : upcomingPlans.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
-              <Calendar className="w-16 h-16 mx-auto mb-4 opacity-50" />
+          {upcomingPlans.length === 0 ? (
+            <div className="text-center py-8 text-gray-400">
+              <Calendar className="w-12 h-12 mx-auto mb-2 opacity-50" />
               <p>Chưa có lịch hẹn nào</p>
               <button
                 onClick={() => navigate('/plans/add')}
-                className="mt-4 text-rose-600 hover:text-rose-700 font-medium"
+                className="mt-3 text-purple-600 hover:text-purple-700 font-medium text-sm"
               >
-                Thêm lịch hẹn ngay
+                Tạo lịch hẹn mới
               </button>
             </div>
           ) : (
-            <div className="space-y-4">
-              {upcomingPlans.slice(0, 3).map((plan: PlanDto) => (
+            <div className="space-y-3">
+              {upcomingPlans.map((plan) => (
                 <div
                   key={plan.id}
-                  className="flex items-center space-x-4 p-4 rounded-xl hover:bg-gray-50 transition-all border border-gray-100 cursor-pointer"
                   onClick={() => navigate('/calendar')}
+                  className="p-4 rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50 cursor-pointer transition-all"
                 >
-                  <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-rose-100 to-orange-100 flex items-center justify-center">
-                    <Calendar className="w-10 h-10 text-rose-500" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-gray-900">
-                      {plan.restaurantName}
-                    </h3>
-                    {plan.notes && (
-                      <p className="text-sm text-gray-600 mt-1 line-clamp-1">
-                        {plan.notes}
-                      </p>
-                    )}
-                    <div className="flex items-center space-x-4 mt-2">
-                      <span className="text-sm text-rose-600 font-medium flex items-center space-x-1">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900">
+                        {plan.restaurantName}
+                      </h3>
+                      <div className="flex items-center space-x-2 text-sm text-gray-600 mt-1">
                         <Calendar className="w-4 h-4" />
-                        <span>{new Date(plan.planDate).toLocaleDateString('vi-VN')}</span>
-                      </span>
-                      <span className="text-sm text-gray-600 flex items-center space-x-1">
-                        <Clock className="w-4 h-4" />
-                        <span>{plan.planTime}</span>
-                      </span>
+                        <span>
+                          {new Date(plan.planDate).toLocaleDateString('vi-VN')}
+                        </span>
+                        {plan.planTime && (
+                          <>
+                            <span>•</span>
+                            <Clock className="w-4 h-4" />
+                            <span>{plan.planTime}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <button 
-                    className="bg-gradient-to-r from-rose-500 to-orange-500 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate('/calendar');
-                    }}
-                  >
-                    Chi tiết
-                  </button>
                 </div>
               ))}
             </div>
           )}
         </div>
 
+        {/* Recent Visits */}
         <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-          <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-            <TrendingUp className="w-6 h-6 text-emerald-500" />
-            <span>Thống kê</span>
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
+              <History className="w-6 h-6 text-emerald-500" />
+              <span>Lịch sử gần đây</span>
+            </h2>
+            <button
+              onClick={() => navigate('/history')}
+              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+            >
+              Xem tất cả →
+            </button>
+          </div>
 
-          <div className="space-y-6">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-600 text-sm">Tổng chi tiêu</span>
-                <span className="text-2xl font-bold text-emerald-600">
-                  {(statistics.totalSpent / 1000).toFixed(0)}k
-                </span>
-              </div>
-              <div className="bg-emerald-100 h-2 rounded-full">
-                <div className="bg-gradient-to-r from-emerald-500 to-teal-500 h-2 rounded-full w-3/4" />
-              </div>
+          {recentVisits.length === 0 ? (
+            <div className="text-center py-8 text-gray-400">
+              <History className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p>Chưa có lịch sử nào</p>
+              <button
+                onClick={() => navigate('/history/add')}
+                className="mt-3 text-emerald-600 hover:text-emerald-700 font-medium text-sm"
+              >
+                Thêm lịch sử mới
+              </button>
             </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-600 text-sm">Đánh giá TB</span>
-                <span className="text-2xl font-bold text-amber-600 flex items-center space-x-1">
-                  <Star className="w-5 h-5 fill-current" />
-                  <span>{statistics.averageRating.toFixed(1)}</span>
-                </span>
-              </div>
-              <div className="bg-amber-100 h-2 rounded-full">
+          ) : (
+            <div className="space-y-3">
+              {recentVisits.map((visit) => (
                 <div
-                  className="bg-gradient-to-r from-amber-500 to-orange-500 h-2 rounded-full"
-                  style={{ width: `${(statistics.averageRating / 5) * 100}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-gray-200">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">
-                Reviews gần đây
-              </h3>
-              <div className="space-y-3">
-                {recentReviews.map((review) => (
-                  <div
-                    key={review.id}
-                    className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-all"
-                  >
-                    <div className="flex-shrink-0 mt-1">
-                      <div className="flex items-center space-x-1">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`w-3 h-3 ${
-                              i < review.rating
-                                ? 'text-amber-400 fill-current'
-                                : 'text-gray-300'
-                            }`}
-                          />
-                        ))}
+                  key={visit.id}
+                  onClick={() => navigate('/history')}
+                  className="p-4 rounded-lg border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 cursor-pointer transition-all"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900">
+                        {visit.restaurantName}
+                      </h3>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <span className="text-sm text-gray-600">
+                          {new Date(visit.visitDate).toLocaleDateString('vi-VN')}
+                        </span>
+                        {visit.rating && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            {renderStars(visit.rating)}
+                          </>
+                        )}
                       </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {review.restaurant.name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(review.visitDate).toLocaleDateString('vi-VN')}
-                      </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Top Restaurants */}
+      {topRestaurants && topRestaurants.length > 0 && (
+        <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
+              <Heart className="w-6 h-6 text-rose-500" />
+              <span>Quán ăn yêu thích</span>
+            </h2>
+            <button
+              onClick={() => navigate('/statistics')}
+              className="text-sm text-rose-600 hover:text-rose-700 font-medium"
+            >
+              Xem thống kê →
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {topRestaurants.map((restaurant, index) => (
+              <div
+                key={restaurant.restaurantId}
+                className="p-4 rounded-lg border border-gray-200 hover:border-rose-300 hover:bg-rose-50 cursor-pointer transition-all"
+                onClick={() => navigate('/restaurants')}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-2xl font-bold text-rose-500">
+                      #{index + 1}
+                    </span>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">
+                        {restaurant.restaurantName}
+                      </h3>
+                      <p className="text-xs text-gray-500">{restaurant.areaName}</p>
                     </div>
                   </div>
-                ))}
+                </div>
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                  <div className="flex items-center space-x-1 text-sm text-gray-600">
+                    <History className="w-4 h-4" />
+                    <span>{restaurant.visitCount} lần</span>
+                  </div>
+                  {restaurant.averageRating && (
+                    <div className="flex items-center space-x-1">
+                      {renderStars(Math.round(restaurant.averageRating))}
+                      <span className="text-sm text-gray-600 ml-1">
+                        {restaurant.averageRating.toFixed(1)}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Quick Actions */}
+      {stats && (
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-200">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Thống kê nhanh</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {stats.wantToEatCount}
+              </div>
+              <div className="text-sm text-gray-600 mt-1">Muốn ăn</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-emerald-600">
+                {stats.eatenCount}
+              </div>
+              <div className="text-sm text-gray-600 mt-1">Đã ăn</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                {stats.totalAreas}
+              </div>
+              <div className="text-sm text-gray-600 mt-1">Khu vực</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">
+                {stats.totalPlans}
+              </div>
+              <div className="text-sm text-gray-600 mt-1">Tổng lịch hẹn</div>
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
-            <Heart className="w-6 h-6 text-rose-500" />
-            <span>Muốn thử</span>
-          </h2>
-          <button
-            onClick={() => navigate('/restaurants')}
-            className="text-rose-600 hover:text-rose-700 font-medium text-sm flex items-center space-x-1"
-          >
-            <span>Xem tất cả</span>
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {recentRestaurants.map((restaurant) => (
-            <div
-              key={restaurant.id}
-              className="group cursor-pointer"
-              onClick={() => navigate('/restaurants')}
-            >
-              <div className="relative overflow-hidden rounded-xl mb-3">
-                <img
-                  src={restaurant.images[0]}
-                  alt={restaurant.name}
-                  className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
-                />
-                <div className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full text-sm font-semibold shadow-lg">
-                  {restaurant.status === 'want_to_eat' ? '❤️ Muốn ăn' : '✨ Đã ăn'}
-                </div>
-              </div>
-              <h3 className="font-bold text-gray-900 group-hover:text-rose-600 transition-colors">
-                {restaurant.name}
-              </h3>
-              <p className="text-sm text-gray-600 mt-1 line-clamp-1">
-                {restaurant.address}
-              </p>
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-sm font-medium text-rose-600">
-                  {restaurant.priceRange}
-                </span>
-                {restaurant.rating && (
-                  <div className="flex items-center space-x-1">
-                    <Star className="w-4 h-4 text-amber-400 fill-current" />
-                    <span className="text-sm font-medium text-gray-700">
-                      {restaurant.rating}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
