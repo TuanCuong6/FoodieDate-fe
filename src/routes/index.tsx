@@ -12,6 +12,7 @@ import AreasPage from '../pages/areas/AreasPage';
 import RestaurantsPage from '../pages/restaurants/RestaurantsPage';
 import AddRestaurantPage from '../pages/restaurants/AddRestaurantPage';
 import CalendarPage from '../pages/calendar/CalendarPage';
+import AddPlanPage from '../pages/AddPlan';
 import StatisticsPage from '../pages/statistics/StatisticsPage';
 
 export const AppRoutes = () => {
@@ -39,6 +40,7 @@ export const AppRoutes = () => {
         <Route path="restaurants" element={<RestaurantsPage />} />
         <Route path="restaurants/add" element={<AddRestaurantPage />} />
         <Route path="calendar" element={<CalendarPage />} />
+        <Route path="plans/add" element={<AddPlanPage />} />
         <Route path="statistics" element={<StatisticsPage />} />
       </Route>
 

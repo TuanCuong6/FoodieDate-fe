@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -9,6 +10,7 @@ import {
   Check,
   X,
   Trash2,
+  Plus,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useUI } from '../contexts/UIContext';
@@ -22,6 +24,7 @@ import {
 import { PlanDto } from '../services';
 
 export default function Calendar() {
+  const navigate = useNavigate();
   const { coupleId } = useAuth();
   const { showToast } = useUI();
   const dispatch = useAppDispatch();
@@ -153,6 +156,13 @@ export default function Calendar() {
             {upcomingPlans.length} lịch hẹn sắp tới
           </p>
         </div>
+        <button
+          onClick={() => navigate('/plans/add')}
+          className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center space-x-2"
+        >
+          <Plus className="w-5 h-5" />
+          <span>Tạo lịch hẹn</span>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Heart,
@@ -6,16 +7,29 @@ import {
   TrendingUp,
   Clock,
   Star,
-  DollarSign,
   ChevronRight,
 } from 'lucide-react';
-import { statistics, plans, restaurants, reviews } from '../data/mockData';
+import { statistics, restaurants, reviews } from '../data/mockData';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { fetchUpcomingPlans } from '../store/slices/plansSlice';
+import { useAuth } from '../contexts';
+import { PlanDto } from '../services';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const upcomingPlans = plans.filter((p) => p.status === 'upcoming');
+  const dispatch = useAppDispatch();
+  const { coupleId } = useAuth();
+  
+  const { plans, loading: plansLoading } = useAppSelector((state) => state.plans);
+  const upcomingPlans = plans.filter((p) => p.status === 'Upcoming');
   const recentRestaurants = restaurants.slice(0, 4);
   const recentReviews = reviews.slice(0, 3);
+
+  useEffect(() => {
+    if (coupleId) {
+      dispatch(fetchUpcomingPlans(coupleId));
+    }
+  }, [dispatch, coupleId]);
 
   const stats = [
     {
@@ -44,7 +58,7 @@ export default function Dashboard() {
     },
     {
       label: 'Lịch hẹn',
-      value: statistics.upcomingPlans,
+      value: upcomingPlans.length,
       icon: Calendar,
       color: 'from-emerald-500 to-teal-500',
       bgColor: 'bg-emerald-50',
@@ -110,12 +124,17 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {upcomingPlans.length === 0 ? (
+          {plansLoading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-500 mx-auto"></div>
+              <p className="text-gray-500 mt-4">Đang tải...</p>
+            </div>
+          ) : upcomingPlans.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
               <Calendar className="w-16 h-16 mx-auto mb-4 opacity-50" />
               <p>Chưa có lịch hẹn nào</p>
               <button
-                onClick={() => navigate('/restaurants')}
+                onClick={() => navigate('/plans/add')}
                 className="mt-4 text-rose-600 hover:text-rose-700 font-medium"
               >
                 Thêm lịch hẹn ngay
@@ -123,35 +142,42 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="space-y-4">
-              {upcomingPlans.map((plan) => (
+              {upcomingPlans.slice(0, 3).map((plan: PlanDto) => (
                 <div
                   key={plan.id}
-                  className="flex items-center space-x-4 p-4 rounded-xl hover:bg-gray-50 transition-all border border-gray-100"
+                  className="flex items-center space-x-4 p-4 rounded-xl hover:bg-gray-50 transition-all border border-gray-100 cursor-pointer"
+                  onClick={() => navigate('/calendar')}
                 >
-                  <img
-                    src={plan.restaurant.images[0]}
-                    alt={plan.restaurant.name}
-                    className="w-20 h-20 rounded-lg object-cover"
-                  />
+                  <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-rose-100 to-orange-100 flex items-center justify-center">
+                    <Calendar className="w-10 h-10 text-rose-500" />
+                  </div>
                   <div className="flex-1">
                     <h3 className="font-bold text-gray-900">
-                      {plan.restaurant.name}
+                      {plan.restaurantName}
                     </h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {plan.restaurant.address}
-                    </p>
+                    {plan.notes && (
+                      <p className="text-sm text-gray-600 mt-1 line-clamp-1">
+                        {plan.notes}
+                      </p>
+                    )}
                     <div className="flex items-center space-x-4 mt-2">
                       <span className="text-sm text-rose-600 font-medium flex items-center space-x-1">
                         <Calendar className="w-4 h-4" />
-                        <span>{new Date(plan.date).toLocaleDateString('vi-VN')}</span>
+                        <span>{new Date(plan.planDate).toLocaleDateString('vi-VN')}</span>
                       </span>
                       <span className="text-sm text-gray-600 flex items-center space-x-1">
                         <Clock className="w-4 h-4" />
-                        <span>{plan.time}</span>
+                        <span>{plan.planTime}</span>
                       </span>
                     </div>
                   </div>
-                  <button className="bg-gradient-to-r from-rose-500 to-orange-500 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all">
+                  <button 
+                    className="bg-gradient-to-r from-rose-500 to-orange-500 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/calendar');
+                    }}
+                  >
                     Chi tiết
                   </button>
                 </div>

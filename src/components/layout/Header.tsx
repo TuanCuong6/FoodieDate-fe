@@ -5,7 +5,6 @@ import {
   MapPin,
   Calendar,
   Heart,
-  PlusCircle,
   Menu,
   X,
   BarChart3,
@@ -67,14 +66,6 @@ export const Header = () => {
 
           <div className="hidden md:flex items-center space-x-4">
             <Link
-              to="/restaurants/add"
-              className="flex items-center space-x-2 bg-gradient-to-r from-rose-500 to-orange-500 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all"
-            >
-              <PlusCircle className="w-5 h-5" />
-              <span>Thêm quán</span>
-            </Link>
-
-            <Link
               to="/profile"
               className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-all"
               title="Profile"
@@ -115,14 +106,6 @@ export const Header = () => {
                 </Link>
               );
             })}
-            <Link
-              to="/restaurants/add"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full flex items-center space-x-2 bg-gradient-to-r from-rose-500 to-orange-500 text-white px-3 py-2 rounded-lg"
-            >
-              <PlusCircle className="w-5 h-5" />
-              <span>Thêm quán</span>
-            </Link>
             <Link
               to="/profile"
               onClick={() => setMobileMenuOpen(false)}
