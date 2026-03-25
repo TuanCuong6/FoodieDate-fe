@@ -50,25 +50,25 @@ export default function Restaurants() {
   });
 
   const statusConfig = {
-    WantToEat: {
+    [RestaurantStatus.MuonAn]: {
       label: 'Muốn ăn',
       icon: Heart,
       color: 'text-rose-600',
       bgColor: 'bg-rose-50',
     },
-    Eaten: {
+    [RestaurantStatus.DaAn]: {
       label: 'Đã ăn',
       icon: Check,
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50',
     },
-    Dislike: {
+    [RestaurantStatus.KhongThich]: {
       label: 'Không thích',
       icon: ThumbsDown,
       color: 'text-gray-600',
       bgColor: 'bg-gray-50',
     },
-    Considering: {
+    [RestaurantStatus.CanNhac]: {
       label: 'Cân nhắc',
       icon: Clock,
       color: 'text-amber-600',
@@ -220,8 +220,11 @@ export default function Restaurants() {
                 Trạng thái
               </label>
               <select
-                value={filters.status || ''}
-                onChange={(e) => handleStatusChange(e.target.value as RestaurantStatus || undefined)}
+                value={filters.status !== undefined ? filters.status : ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  handleStatusChange(value === '' ? undefined : parseInt(value) as RestaurantStatus);
+                }}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-rose-500"
               >
                 <option value="">Tất cả trạng thái</option>

@@ -29,7 +29,7 @@ export default function AddRestaurant() {
     notes: '',
     source: '',
     sourceUrl: '',
-    status: 'WantToEat' as RestaurantStatus,
+    status: RestaurantStatus.MuonAn,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,6 +65,7 @@ export default function AddRestaurant() {
         sourceUrl: formData.sourceUrl || undefined,
         notes: formData.notes || undefined,
         status: formData.status,
+        createdBy: userId!,
       };
 
       await dispatch(createRestaurant(dto)).unwrap();
@@ -88,7 +89,8 @@ export default function AddRestaurant() {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: name === 'areaId' ? parseInt(value) : value,
+      [name]: name === 'areaId' ? parseInt(value) : 
+              name === 'status' ? parseInt(value) : value,
     });
   };
 
@@ -248,10 +250,10 @@ export default function AddRestaurant() {
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-rose-500"
               >
-                <option value="WantToEat">Muốn ăn</option>
-                <option value="Eaten">Đã ăn</option>
-                <option value="Considering">Cân nhắc</option>
-                <option value="Dislike">Không thích</option>
+                <option value={RestaurantStatus.MuonAn}>Muốn ăn</option>
+                <option value={RestaurantStatus.DaAn}>Đã ăn</option>
+                <option value={RestaurantStatus.CanNhac}>Cân nhắc</option>
+                <option value={RestaurantStatus.KhongThich}>Không thích</option>
               </select>
             </div>
           </div>

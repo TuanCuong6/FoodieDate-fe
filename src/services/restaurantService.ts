@@ -1,6 +1,12 @@
 import { apiClient, ApiResponse } from './api';
 
-export type RestaurantStatus = 'WantToEat' | 'Eaten' | 'Dislike' | 'Considering';
+// Backend enum values
+export enum RestaurantStatus {
+  MuonAn = 0,      // Muốn ăn
+  DaAn = 1,        // Đã ăn
+  KhongThich = 2,  // Không thích
+  CanNhac = 3      // Cân nhắc
+}
 
 export interface CreateRestaurantDto {
   coupleId: number;
@@ -12,6 +18,7 @@ export interface CreateRestaurantDto {
   sourceUrl?: string;
   notes?: string;
   status: RestaurantStatus;
+  createdBy: number;
 }
 
 export interface UpdateRestaurantDto {
@@ -50,7 +57,7 @@ class RestaurantService {
   ): Promise<ApiResponse<RestaurantDto[]>> {
     let url = `/Restaurants?coupleId=${coupleId}`;
     if (areaId) url += `&areaId=${areaId}`;
-    if (status) url += `&status=${status}`;
+    if (status !== undefined) url += `&status=${status}`;
     return apiClient.get<RestaurantDto[]>(url);
   }
 
