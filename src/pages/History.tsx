@@ -17,6 +17,7 @@ import {
   deleteVisitHistory,
 } from '../store/slices/visitHistoriesSlice';
 import { VisitHistoryDto } from '../services/visitHistoryService';
+import RequireCouple from '../components/common/RequireCouple';
 
 export default function History() {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ export default function History() {
   const { showToast } = useUI();
   const dispatch = useAppDispatch();
 
-  const { visitHistories, loading } = useAppSelector((state) => state.visitHistories || { visitHistories: [], loading: false });
+  const { visitHistories } = useAppSelector((state) => state.visitHistories || { visitHistories: [] });
 
   const [selectedVisit, setSelectedVisit] = useState<VisitHistoryDto | null>(null);
 
@@ -64,17 +65,10 @@ export default function History() {
     );
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-xl text-gray-600">Đang tải...</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <RequireCouple>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Lịch sử đã ăn</h1>
           <p className="text-gray-600 mt-1">
@@ -282,6 +276,7 @@ export default function History() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </RequireCouple>
   );
 }

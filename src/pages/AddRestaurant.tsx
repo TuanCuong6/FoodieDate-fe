@@ -13,6 +13,7 @@ import { useUI } from '../contexts/UIContext';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { createRestaurant } from '../store/slices/restaurantsSlice';
 import { fetchAreas } from '../store/slices/areasSlice';
+import RequireCouple from '../components/common/RequireCouple';
 
 export default function AddRestaurant() {
   const navigate = useNavigate();
@@ -128,8 +129,9 @@ export default function AddRestaurant() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
+    <RequireCouple>
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div>
         <h1 className="text-3xl font-bold text-gray-900">Thêm quán mới</h1>
         <p className="text-gray-600 mt-1">
           Thêm quán ăn yêu thích vào danh sách của bạn
@@ -341,6 +343,7 @@ export default function AddRestaurant() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </RequireCouple>
   );
 }

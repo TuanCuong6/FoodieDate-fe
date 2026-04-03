@@ -31,9 +31,10 @@ export default function Dashboard() {
   useEffect(() => {
     if (coupleId) {
       loadDashboardData();
+    } else {
+      setLoading(false);
     }
   }, [coupleId]);
-
   const loadDashboardData = async () => {
     if (!coupleId) return;
 
@@ -81,6 +82,41 @@ export default function Dashboard() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-xl text-gray-600">Đang tải...</div>
+      </div>
+    );
+  }
+
+  // Show message if user doesn't have a couple yet
+  if (!coupleId) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Xin chào, {userName}! 👋
+          </h1>
+          <p className="text-gray-600 mt-1">Chào mừng đến với Foodie Date</p>
+        </div>
+
+        <div className="bg-gradient-to-r from-rose-50 to-orange-50 rounded-2xl p-8 border border-rose-200">
+          <div className="text-center">
+            <div className="w-20 h-20 bg-gradient-to-r from-rose-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Heart className="w-10 h-10 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Bạn chưa có cặp đôi
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Hãy tạo cặp đôi để bắt đầu lên kế hoạch hẹn hò và khám phá những quán ăn ngon cùng nhau!
+            </p>
+            <button
+              onClick={() => navigate('/profile')}
+              className="bg-gradient-to-r from-rose-500 to-orange-500 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-all inline-flex items-center space-x-2"
+            >
+              <Heart className="w-5 h-5" />
+              <span>Tạo cặp đôi ngay</span>
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

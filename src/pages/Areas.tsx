@@ -5,13 +5,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { useUI } from '../contexts/UIContext';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchAreas, createArea, updateArea, deleteArea } from '../store/slices/areasSlice';
+import RequireCouple from '../components/common/RequireCouple';
 
 export default function Areas() {
   const { coupleId } = useAuth();
   const { showToast } = useUI();
   const dispatch = useAppDispatch();
   
-  const { areas, loading } = useAppSelector((state) => state.areas);
+  const { areas } = useAppSelector((state) => state.areas);
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingArea, setEditingArea] = useState<AreaDto | null>(null);
@@ -80,23 +81,16 @@ export default function Areas() {
     setEditAreaName('');
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-xl text-gray-600">Đang tải...</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="bg-white rounded-2xl shadow-lg p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-orange-100 rounded-xl">
-              <MapPin className="text-orange-600" size={24} />
-            </div>
-            <div>
+    <RequireCouple>
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-orange-100 rounded-xl">
+                <MapPin className="text-orange-600" size={24} />
+              </div>
+              <div>
               <h1 className="text-2xl font-bold text-gray-800">Quản lý khu vực</h1>
               <p className="text-sm text-gray-600">Tổ chức quán ăn theo khu vực</p>
             </div>
@@ -224,5 +218,6 @@ export default function Areas() {
         </div>
       )}
     </div>
+    </RequireCouple>
   );
 }

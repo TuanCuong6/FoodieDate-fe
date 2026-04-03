@@ -22,6 +22,7 @@ import {
   deletePlan 
 } from '../store/slices/plansSlice';
 import { PlanDto } from '../services';
+import RequireCouple from '../components/common/RequireCouple';
 
 export default function Calendar() {
   const navigate = useNavigate();
@@ -139,17 +140,10 @@ export default function Calendar() {
   const upcomingPlans = plans.filter((p) => p.status === 'Upcoming');
   const completedPlans = plans.filter((p) => p.status === 'Completed');
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-xl text-gray-600">Đang tải...</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <RequireCouple>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Lịch hẹn</h1>
           <p className="text-gray-600 mt-1">
@@ -417,6 +411,7 @@ export default function Calendar() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </RequireCouple>
   );
 }

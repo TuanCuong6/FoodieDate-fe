@@ -14,6 +14,7 @@ import { useUI } from '../contexts/UIContext';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { createVisitHistory } from '../store/slices/visitHistoriesSlice';
 import { fetchRestaurants } from '../store/slices/restaurantsSlice';
+import RequireCouple from '../components/common/RequireCouple';
 
 export default function AddHistory() {
   const navigate = useNavigate();
@@ -126,8 +127,9 @@ export default function AddHistory() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
+    <RequireCouple>
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div>
         <h1 className="text-3xl font-bold text-gray-900">Thêm lịch sử đã ăn</h1>
         <p className="text-gray-600 mt-1">
           Ghi lại trải nghiệm ăn uống của bạn
@@ -335,6 +337,7 @@ export default function AddHistory() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </RequireCouple>
   );
 }

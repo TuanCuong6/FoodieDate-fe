@@ -21,6 +21,7 @@ export interface CreatePlanDto {
   planDate: string; // ISO date string
   planTime?: string;
   notes?: string;
+  createdBy: number;
 }
 
 export interface UpdatePlanDto {

@@ -18,7 +18,7 @@ import { randomRestaurant } from '../store/slices/plansSlice';
 
 export default function AddPlan() {
   const navigate = useNavigate();
-  const { coupleId } = useAuth();
+  const { coupleId, userId } = useAuth();
   const { showToast, setGlobalLoading } = useUI();
   const dispatch = useAppDispatch();
   
@@ -75,6 +75,7 @@ export default function AddPlan() {
         planDate: new Date(formData.planDate).toISOString(),
         planTime: formData.planTime || undefined,
         notes: formData.notes || undefined,
+        createdBy: userId!,
       };
 
       await dispatch(createPlan(dto)).unwrap();

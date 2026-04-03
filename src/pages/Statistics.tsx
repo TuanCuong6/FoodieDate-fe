@@ -12,6 +12,7 @@ import statisticsService, {
   MonthlyVisitStatsDto,
   RestaurantStatsDto,
 } from '../services/statisticsService';
+import RequireCouple from '../components/common/RequireCouple';
 
 export default function Statistics() {
   const { coupleId } = useAuth();
@@ -24,6 +25,9 @@ export default function Statistics() {
   useEffect(() => {
     if (coupleId) {
       loadStatistics();
+    } else {
+      // Không có coupleId thì set loading = false luôn
+      setLoading(false);
     }
   }, [coupleId]);
 
@@ -79,8 +83,9 @@ export default function Statistics() {
     : 1;
 
   return (
-    <div className="space-y-6">
-      <div>
+    <RequireCouple>
+      <div className="space-y-6">
+        <div>
         <h1 className="text-3xl font-bold text-gray-900">Thống kê</h1>
         <p className="text-gray-600 mt-1">
           Phân tích thói quen ăn uống của bạn
@@ -228,6 +233,7 @@ export default function Statistics() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </RequireCouple>
   );
 }

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authService, coupleService } from '../services';
 import { STORAGE_KEYS } from '../constants';
+import { store, resetStore } from '../store';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -58,7 +59,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         if (storedCoupleId) {
           setCoupleId(parseInt(storedCoupleId));
         } else {
-          // Try to load couple info
+          // Chỉ gọi khi chưa có coupleId trong localStorage
           await loadCoupleInfo(parseInt(storedUserId));
         }
       }
@@ -76,12 +77,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setCoupleId(response.data.id);
         localStorage.setItem(STORAGE_KEYS.COUPLE_ID, response.data.id.toString());
       }
-    } catch (error) {
-      console.log('User chưa có couple');
+    } catch (error: any) {
+      // User chưa có couple - đây là trường hợp bình thường cho user mới
+      // Không cần log error, chỉ để coupleId = null
+      console.log('User chưa có couple, cần tạo couple mới');
     }
   };
 
-  const login = (uid: number, name: string, email: string, tkn: string, cid?: number) => {
+  const login = async (uid: number, name: string, email: string, tkn: string, cid?: number) => {
     setIsAuthenticated(true);
     setUserId(uid);
     setUserName(name);
@@ -95,12 +98,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setCoupleId(cid);
       localStorage.setItem(STORAGE_KEYS.COUPLE_ID, cid.toString());
     } else {
-      loadCoupleInfo(uid);
+      // Chỉ gọi 1 lần khi login
+      await loadCoupleInfo(uid);
     }
   };
 
   const logout = () => {
     authService.logout();
+    
+    // Reset Redux store trước
+    store.dispatch(resetStore());
+    
+    // Sau đó reset local state
     setIsAuthenticated(false);
     setUserId(null);
     setUserName('');

@@ -22,6 +22,7 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchRestaurants, deleteRestaurant, setFilters } from '../store/slices/restaurantsSlice';
 import { fetchAreas } from '../store/slices/areasSlice';
 import { createPlan } from '../store/slices/plansSlice';
+import RequireCouple from '../components/common/RequireCouple';
 
 interface SelectedRestaurant {
   id: number;
@@ -32,11 +33,11 @@ interface SelectedRestaurant {
 
 export default function Restaurants() {
   const navigate = useNavigate();
-  const { coupleId } = useAuth();
+  const { coupleId, userId } = useAuth();
   const { showToast } = useUI();
   const dispatch = useAppDispatch();
   
-  const { restaurants, loading, filters } = useAppSelector((state) => state.restaurants);
+  const { restaurants, filters } = useAppSelector((state) => state.restaurants);
   const { areas } = useAppSelector((state) => state.areas);
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -116,7 +117,7 @@ export default function Restaurants() {
   };
 
   const handleCreatePlan = async () => {
-    if (!coupleId || !selectedRestaurant) return;
+    if (!coupleId || !selectedRestaurant || !userId) return;
 
     if (!planForm.planDate) {
       showToast('error', 'Vui lòng chọn ngày hẹn');
@@ -130,6 +131,7 @@ export default function Restaurants() {
         planDate: new Date(planForm.planDate).toISOString(),
         planTime: planForm.planTime || undefined,
         notes: planForm.notes || undefined,
+        createdBy: userId,
       };
 
       await dispatch(createPlan(dto)).unwrap();
@@ -148,17 +150,10 @@ export default function Restaurants() {
     restaurant.notes?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-xl text-gray-600">Đang tải...</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <RequireCouple>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Danh sách quán ăn</h1>
           <p className="text-gray-600 mt-1">
@@ -424,6 +419,7 @@ export default function Restaurants() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </RequireCouple>
   );
 }
