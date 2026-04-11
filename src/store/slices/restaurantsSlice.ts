@@ -1,5 +1,12 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { restaurantService, RestaurantDto, CreateRestaurantDto, UpdateRestaurantDto, RestaurantStatus } from '../../services';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import {
+  restaurantService,
+  RestaurantDto,
+  CreateRestaurantDto,
+  UpdateRestaurantDto,
+  RestaurantStatus,
+} from "../../services";
+import { getSeedRestaurants } from "../../data/seedRestaurants";
 
 interface RestaurantsState {
   restaurants: RestaurantDto[];
@@ -17,76 +24,93 @@ const initialState: RestaurantsState = {
   loading: false,
   error: null,
   filters: {
-    searchQuery: '',
+    searchQuery: "",
   },
 };
 
 // Async Thunks
 export const fetchRestaurants = createAsyncThunk(
-  'restaurants/fetchRestaurants',
+  "restaurants/fetchRestaurants",
   async (
-    { coupleId, areaId, status }: { coupleId: number; areaId?: number; status?: RestaurantStatus },
-    { rejectWithValue }
+    {
+      coupleId,
+      areaId,
+      status,
+    }: { coupleId: number; areaId?: number; status?: RestaurantStatus },
+    { rejectWithValue },
   ) => {
     try {
-      const response = await restaurantService.getRestaurants(coupleId, areaId, status);
+      const response = await restaurantService.getRestaurants(
+        coupleId,
+        areaId,
+        status,
+      );
       if (response.success && response.data) {
         return response.data;
       }
-      return rejectWithValue(response.message || 'Không thể tải danh sách quán ăn');
+      const seed = getSeedRestaurants(coupleId);
+      return seed
+        .filter((r) => (areaId ? r.areaId === areaId : true))
+        .filter((r) => (status !== undefined ? r.status === status : true));
     } catch (error: any) {
-      return rejectWithValue(error.message);
+      const seed = getSeedRestaurants(coupleId);
+      return seed
+        .filter((r) => (areaId ? r.areaId === areaId : true))
+        .filter((r) => (status !== undefined ? r.status === status : true));
     }
-  }
+  },
 );
 
 export const createRestaurant = createAsyncThunk(
-  'restaurants/createRestaurant',
+  "restaurants/createRestaurant",
   async (dto: CreateRestaurantDto, { rejectWithValue }) => {
     try {
       const response = await restaurantService.createRestaurant(dto);
       if (response.success && response.data) {
         return response.data;
       }
-      return rejectWithValue(response.message || 'Không thể thêm quán ăn');
+      return rejectWithValue(response.message || "Không thể thêm quán ăn");
     } catch (error: any) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 
 export const updateRestaurant = createAsyncThunk(
-  'restaurants/updateRestaurant',
-  async ({ id, dto }: { id: number; dto: UpdateRestaurantDto }, { rejectWithValue }) => {
+  "restaurants/updateRestaurant",
+  async (
+    { id, dto }: { id: number; dto: UpdateRestaurantDto },
+    { rejectWithValue },
+  ) => {
     try {
       const response = await restaurantService.updateRestaurant(id, dto);
       if (response.success && response.data) {
         return response.data;
       }
-      return rejectWithValue(response.message || 'Không thể cập nhật quán ăn');
+      return rejectWithValue(response.message || "Không thể cập nhật quán ăn");
     } catch (error: any) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 
 export const deleteRestaurant = createAsyncThunk(
-  'restaurants/deleteRestaurant',
+  "restaurants/deleteRestaurant",
   async (id: number, { rejectWithValue }) => {
     try {
       const response = await restaurantService.deleteRestaurant(id);
       if (response.success) {
         return id;
       }
-      return rejectWithValue(response.message || 'Không thể xóa quán ăn');
+      return rejectWithValue(response.message || "Không thể xóa quán ăn");
     } catch (error: any) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 
 const restaurantsSlice = createSlice({
-  name: 'restaurants',
+  name: "restaurants",
   initialState,
   reducers: {
     setFilters: (state, action) => {
@@ -135,7 +159,9 @@ const restaurantsSlice = createSlice({
       })
       .addCase(updateRestaurant.fulfilled, (state, action) => {
         state.loading = false;
-        const index = state.restaurants.findIndex(r => r.id === action.payload.id);
+        const index = state.restaurants.findIndex(
+          (r) => r.id === action.payload.id,
+        );
         if (index !== -1) {
           state.restaurants[index] = action.payload;
         }
@@ -153,7 +179,9 @@ const restaurantsSlice = createSlice({
       })
       .addCase(deleteRestaurant.fulfilled, (state, action) => {
         state.loading = false;
-        state.restaurants = state.restaurants.filter(r => r.id !== action.payload);
+        state.restaurants = state.restaurants.filter(
+          (r) => r.id !== action.payload,
+        );
       })
       .addCase(deleteRestaurant.rejected, (state, action) => {
         state.loading = false;
