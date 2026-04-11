@@ -3,12 +3,16 @@ import { User, Heart, Mail, Calendar, LogOut, UserPlus } from 'lucide-react';
 import { userService, coupleService, UserProfile, CoupleDetail, InvitationDto } from '../services';
 import { useAuth } from '../contexts/AuthContext';
 import { useUI } from '../contexts/UIContext';
+import PendingInvitation from '../components/couple/PendingInvitation';
+import SentInvitation from '../components/couple/SentInvitation';
 
 export default function Profile() {
   const { userId, updateCoupleId, logout } = useAuth();
   const { showToast } = useUI();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [couple, setCouple] = useState<CoupleDetail | null>(null);
+  const [pendingInvitation, setPendingInvitation] = useState<CoupleDetail | null>(null);
+  const [sentInvitation, setSentInvitation] = useState<CoupleDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -35,6 +39,26 @@ export default function Profile() {
             setCouple(coupleRes.data);
             updateCoupleId(coupleRes.data.id);
           }
+        } else {
+          // Check for pending invitation (người nhận)
+          try {
+            const invitationRes = await coupleService.getPendingInvitation(userId);
+            if (invitationRes.success && invitationRes.data) {
+              setPendingInvitation(invitationRes.data);
+            }
+          } catch (error) {
+            // No pending invitation
+          }
+
+          // Check for sent invitation (người gửi)
+          try {
+            const sentRes = await coupleService.getSentInvitation(userId);
+            if (sentRes.success && sentRes.data) {
+              setSentInvitation(sentRes.data);
+            }
+          } catch (error) {
+            // No sent invitation
+          }
         }
       }
     } catch (error) {
@@ -58,14 +82,31 @@ export default function Profile() {
         setMessage(response.data.message);
         if (response.data.success) {
           setShowInviteModal(false);
-          showToast('success', 'Tạo cặp đôi thành công!');
-          loadProfile(); // Reload to get couple info
+          setInviteEmail('');
+          setCoupleName('');
+          showToast('success', response.data.message);
+          loadProfile();
+        } else {
+          showToast('error', response.data.message);
         }
       }
     } catch (error: any) {
       setMessage(error.message || 'Đã có lỗi xảy ra');
       showToast('error', error.message || 'Đã có lỗi xảy ra');
     }
+  };
+
+  const handleInvitationAccepted = () => {
+    setPendingInvitation(null);
+    loadProfile();
+  };
+
+  const handleInvitationRejected = () => {
+    setPendingInvitation(null);
+  };
+
+  const handleSentInvitationCancelled = () => {
+    setSentInvitation(null);
   };
 
   const handleLogout = () => {
@@ -83,6 +124,27 @@ export default function Profile() {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
+      {/* Pending Invitation - Người nhận */}
+      {pendingInvitation && (
+        <div className="mb-6">
+          <PendingInvitation
+            invitation={pendingInvitation}
+            onAccepted={handleInvitationAccepted}
+            onRejected={handleInvitationRejected}
+          />
+        </div>
+      )}
+
+      {/* Sent Invitation - Người gửi */}
+      {sentInvitation && (
+        <div className="mb-6">
+          <SentInvitation
+            invitation={sentInvitation}
+            onCancelled={handleSentInvitationCancelled}
+          />
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl shadow-lg p-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold text-gray-800">Thông tin cá nhân</h1>

@@ -15,10 +15,12 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchRecentVisits } from '../store/slices/visitHistoriesSlice';
 import { fetchUpcomingPlans } from '../store/slices/plansSlice';
 import statisticsService, { DashboardStatsDto, RestaurantStatsDto } from '../services/statisticsService';
+import { coupleService, CoupleDetail } from '../services/coupleService';
+import PendingInvitation from '../components/couple/PendingInvitation';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { coupleId, userName } = useAuth();
+  const { coupleId, userName, userId } = useAuth();
   const dispatch = useAppDispatch();
 
   const { visitHistories } = useAppSelector((state) => state.visitHistories || { visitHistories: [] });
@@ -26,6 +28,7 @@ export default function Dashboard() {
 
   const [stats, setStats] = useState<DashboardStatsDto | null>(null);
   const [topRestaurants, setTopRestaurants] = useState<RestaurantStatsDto[]>([]);
+  const [pendingInvitation, setPendingInvitation] = useState<CoupleDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,8 +36,12 @@ export default function Dashboard() {
       loadDashboardData();
     } else {
       setLoading(false);
+      // Check for pending invitation
+      if (userId) {
+        checkPendingInvitation();
+      }
     }
-  }, [coupleId]);
+  }, [coupleId, userId]);
   const loadDashboardData = async () => {
     if (!coupleId) return;
 
@@ -62,6 +69,28 @@ export default function Dashboard() {
     }
   };
 
+  const checkPendingInvitation = async () => {
+    if (!userId) return;
+    
+    try {
+      const response = await coupleService.getPendingInvitation(userId);
+      if (response.success && response.data) {
+        setPendingInvitation(response.data);
+      }
+    } catch (error) {
+      // No pending invitation
+    }
+  };
+
+  const handleInvitationAccepted = () => {
+    setPendingInvitation(null);
+    window.location.reload(); // Reload to get couple data
+  };
+
+  const handleInvitationRejected = () => {
+    setPendingInvitation(null);
+  };
+
   const renderStars = (rating?: number) => {
     if (!rating) return null;
     return (
@@ -86,41 +115,6 @@ export default function Dashboard() {
     );
   }
 
-  // Show message if user doesn't have a couple yet
-  if (!coupleId) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Xin chào, {userName}! 👋
-          </h1>
-          <p className="text-gray-600 mt-1">Chào mừng đến với Foodie Date</p>
-        </div>
-
-        <div className="bg-gradient-to-r from-rose-50 to-orange-50 rounded-2xl p-8 border border-rose-200">
-          <div className="text-center">
-            <div className="w-20 h-20 bg-gradient-to-r from-rose-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Heart className="w-10 h-10 text-white" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Bạn chưa có cặp đôi
-            </h2>
-            <p className="text-gray-600 mb-6">
-              Hãy tạo cặp đôi để bắt đầu lên kế hoạch hẹn hò và khám phá những quán ăn ngon cùng nhau!
-            </p>
-            <button
-              onClick={() => navigate('/profile')}
-              className="bg-gradient-to-r from-rose-500 to-orange-500 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-all inline-flex items-center space-x-2"
-            >
-              <Heart className="w-5 h-5" />
-              <span>Tạo cặp đôi ngay</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // Safe access to plans and visitHistories
   const allPlans = plans || [];
   const allVisits = visitHistories || [];
@@ -129,6 +123,43 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Pending Invitation */}
+      {pendingInvitation && (
+        <PendingInvitation
+          invitation={pendingInvitation}
+          onAccepted={handleInvitationAccepted}
+          onRejected={handleInvitationRejected}
+        />
+      )}
+
+      {/* Banner nếu chưa có couple */}
+      {!coupleId && !pendingInvitation && (
+        <div className="bg-gradient-to-r from-rose-50 to-orange-50 rounded-xl p-4 border border-rose-200">
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0">
+              <div className="w-10 h-10 bg-gradient-to-r from-rose-500 to-orange-500 rounded-full flex items-center justify-center">
+                <Heart className="w-5 h-5 text-white" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-rose-900 mb-1">
+                Bạn chưa có cặp đôi
+              </h3>
+              <p className="text-sm text-rose-800 mb-3">
+                Tạo cặp đôi để bắt đầu lưu trữ và quản lý danh sách quán ăn yêu thích của hai bạn
+              </p>
+              <button
+                onClick={() => navigate('/profile')}
+                className="bg-gradient-to-r from-rose-500 to-orange-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:shadow-lg transition-all inline-flex items-center space-x-2"
+              >
+                <Heart className="w-4 h-4" />
+                <span>Tạo cặp đôi ngay</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div>
         <h1 className="text-3xl font-bold text-gray-900">
           Xin chào, {userName}! 👋

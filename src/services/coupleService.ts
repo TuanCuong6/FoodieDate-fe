@@ -1,5 +1,11 @@
 import { apiClient, ApiResponse } from './api';
 
+export enum CoupleStatus {
+  Pending = 0,
+  Active = 1,
+  Rejected = 2
+}
+
 export interface CreateCoupleDto {
   user1Id: number;
   user2Id: number;
@@ -32,6 +38,7 @@ export interface CoupleDetail {
   user1Id: number;
   user2Id: number;
   coupleName?: string;
+  status: CoupleStatus;
   createdAt: string;
   user1: UserInfo;
   user2: UserInfo;
@@ -56,6 +63,26 @@ class CoupleService {
 
   async sendInvitation(userId: number, dto: InvitationDto): Promise<ApiResponse<InvitationResponse>> {
     return apiClient.post<InvitationResponse>(`/Couple/invite?userId=${userId}`, dto);
+  }
+
+  async getPendingInvitation(userId: number): Promise<ApiResponse<CoupleDetail>> {
+    return apiClient.get<CoupleDetail>(`/Couple/pending-invitation/${userId}`);
+  }
+
+  async getSentInvitation(userId: number): Promise<ApiResponse<CoupleDetail>> {
+    return apiClient.get<CoupleDetail>(`/Couple/sent-invitation/${userId}`);
+  }
+
+  async acceptInvitation(coupleId: number, userId: number): Promise<ApiResponse<InvitationResponse>> {
+    return apiClient.post<InvitationResponse>(`/Couple/${coupleId}/accept?userId=${userId}`, {});
+  }
+
+  async rejectInvitation(coupleId: number, userId: number): Promise<ApiResponse<InvitationResponse>> {
+    return apiClient.post<InvitationResponse>(`/Couple/${coupleId}/reject?userId=${userId}`, {});
+  }
+
+  async cancelInvitation(coupleId: number, userId: number): Promise<ApiResponse<InvitationResponse>> {
+    return apiClient.post<InvitationResponse>(`/Couple/${coupleId}/cancel?userId=${userId}`, {});
   }
 }
 
